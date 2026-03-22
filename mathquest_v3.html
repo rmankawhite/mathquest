@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MathQuest!</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#1a1a2e;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  min-height:100vh;
+  font-family:'Press Start 2P',monospace;
+  overflow:hidden;
+}
+#title-screen {
+  display:flex; flex-direction:column;
+  align-items:center; gap:20px; color:#fff;
+}
+#title-screen h1 {
+  font-size:32px; color:#ffd700;
+  text-shadow:4px 4px 0 #b8860b,0 0 20px #ffd70088;
+  letter-spacing:4px; animation:pulse 2s infinite;
+}
+@keyframes pulse {
+  0%,100%{text-shadow:4px 4px 0 #b8860b,0 0 20px #ffd70088;}
+  50%{text-shadow:4px 4px 0 #b8860b,0 0 40px #ffd700cc;}
+}
+#char-select {
+  display:grid; grid-template-columns:repeat(4,1fr);
+  gap:16px; margin:10px 0;
+}
+.char-card {
+  display:flex; flex-direction:column;
+  align-items:center; gap:8px;
+  cursor:pointer; padding:12px;
+  border:3px solid #444; border-radius:4px;
+  background:#16213e; transition:all 0.15s;
+}
+.char-card:hover,.char-card.selected {
+  border-color:#ffd700; background:#0f3460; transform:scale(1.05);
+}
+.char-card canvas { image-rendering:pixelated; }
+.char-card span { font-size:7px; color:#ccc; }
+#start-btn {
+  font-family:'Press Start 2P',monospace; font-size:14px;
+  padding:14px 32px; background:#ffd700; color:#1a1a2e;
+  border:none; cursor:pointer; border-radius:2px;
+  box-shadow:4px 4px 0 #b8860b; transition:all 0.1s;
+}
+#start-btn:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 #b8860b;}
+#start-btn:disabled{opacity:0.4;cursor:default;transform:none;box-shadow:4px 4px 0 #b8860b;}
+#game-wrap {
+  display:none; flex-direction:column;
+  align-items:center; gap:8px;
+}
+#hud {
+  display:flex; gap:24px; color:#ffd700;
+  font-size:9px; width:640px;
+  justify-content:space-between; align-items:center;
+}
+#canvas-wrap { position:relative; }
+#gameCanvas {
+  display:block; image-rendering:pixelated;
+  border:4px solid #ffd700;
+  box-shadow:0 0 30px #ffd70044;
+}
+#quiz-overlay {
+  display:none; position:absolute;
+  top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.88);
+  flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:14px;
+  border:4px solid #ffd700;
+}
+#quiz-overlay.active{display:flex;}
+#npc-portrait{image-rendering:pixelated;}
+#npc-name{color:#ffd700;font-size:12px;}
+#npc-speech{
+  color:#fff;font-size:9px;text-align:center;
+  max-width:400px;line-height:2;white-space:pre-line;
+}
+#quiz-question{color:#7fff7f;font-size:18px;}
+#quiz-feedback{font-size:9px;min-height:14px;}
+#quiz-input-row{display:flex;gap:8px;align-items:center;}
+#quiz-answer {
+  font-family:'Press Start 2P',monospace; font-size:14px;
+  width:140px; padding:8px; text-align:center;
+  background:#1a1a2e; color:#fff;
+  border:3px solid #ffd700; outline:none;
+}
+#quiz-submit {
+  font-family:'Press Start 2P',monospace; font-size:10px;
+  padding:8px 16px; background:#ffd700; color:#1a1a2e;
+  border:none; cursor:pointer; box-shadow:3px 3px 0 #b8860b;
+}
+#quiz-submit:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 #b8860b;}
+#win-screen {
+  display:none; position:absolute;
+  top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.92);
+  flex-direction:column; align-items:center; justify-content:center; gap:20px;
+}
+#win-screen.active{display:flex;}
+#win-screen h2{color:#ffd700;font-size:26px;text-shadow:3px 3px 0 #b8860b;animation:pulse 1.5s infinite;}
+#win-screen p{color:#fff;font-size:10px;line-height:2.2;text-align:center;white-space:pre-line;}
+#win-canvas{image-rendering:pixelated;}
+#restart-btn, #next-level-btn {
+  font-family:'Press Start 2P',monospace; font-size:11px;
+  padding:12px 28px; background:#ffd700; color:#1a1a2e;
+  border:none; cursor:pointer; box-shadow:4px 4px 0 #b8860b;
+}
+#restart-btn:hover, #next-level-btn:hover {transform:translate(2px,2px);box-shadow:2px 2px 0 #b8860b;}
+</style>
+</head>
+<body>
+
+<div id="title-screen">
+  <h1>⭐ MATHQUEST ⭐</h1>
+  <p style="font-size:9px;color:#aaa;">Choose your hero!</p>
+  <div id="char-select"></div>
+  <p id="select-hint" style="font-size:8px;color:#888;">Click a character to select</p>
+  <button id="start-btn" disabled>START GAME</button>
+  <p style="font-size:7px;color:#555;margin-top:4px;">Arrow keys or WASD to move</p>
+</div>
+
+<div id="game-wrap">
+  <div id="hud">
+    <span id="hud-char">Hero: —</span>
+    <span id="hud-level">Level: 1</span>
+    <span id="hud-coins">🪙 0 / 8 coins</span>
+    <span id="hud-npcs">Friends: 0 / 11</span>
+    <button id="mute-btn" style="font-family:'Press Start 2P',monospace;font-size:7px;padding:4px 8px;background:#1a1a2e;color:#ffd700;border:2px solid #ffd700;cursor:pointer;">♪ ON</button>
+  </div>
+  <div id="canvas-wrap">
+    <canvas id="gameCanvas" width="640" height="480"></canvas>
+    <div id="quiz-overlay">
+      <canvas id="npc-portrait" width="64" height="64"></canvas>
+      <div id="npc-name"></div>
+      <div id="npc-speech"></div>
+      <div id="quiz-question"></div>
+      <div id="quiz-feedback"></div>
+      <div id="quiz-input-row">
+        <input id="quiz-answer" type="number" placeholder="?" autocomplete="off">
+        <button id="quiz-submit">OK!</button>
+      </div>
+    </div>
+    <div id="win-screen">
+      <h2>YOU WIN! 🎉</h2>
+      <canvas id="win-canvas" width="640" height="180"></canvas>
+      <p id="win-msg"></p>
+      <button id="next-level-btn" style="display:none;">LEVEL 2 →</button>
+      <button id="restart-btn">PLAY AGAIN</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  PIXEL DRAWING
+// ============================================================
+function px(ctx, pixels, ox, oy, scale) {
+  for (const [x,y,c] of pixels) {
+    ctx.fillStyle = c;
+    ctx.fillRect(ox+x*scale, oy+y*scale, scale, scale);
+  }
+}
+
+// ============================================================
+//  PLAYER SPRITES  (16x16, drawn at scale 2 = 32x32)
+// ============================================================
+function spriteDog() {
+  const B='#c8a46e',D='#8b5e3c',T='#e8c89a',W='#fff',K='#111',P='#f4a0a0',R='#e05050',p=[];
+  // ears
+  [[2,1],[3,1],[2,2],[3,2],[12,1],[13,1],[12,2],[13,2]].forEach(([x,y])=>p.push([x,y,D]));
+  // head
+  for(let x=3;x<=12;x++) for(let y=2;y<=7;y++) p.push([x,y,B]);
+  // face detail
+  p.push([5,4,K],[6,4,K],[9,4,K],[10,4,K],[5,3,W],[9,3,W]);
+  p.push([7,6,K],[8,6,K],[7,7,D],[8,7,D],[6,7,D],[9,7,D]);
+  for(let x=5;x<=10;x++) p.push([x,8,P]);
+  p.push([7,9,R],[8,9,R]);
+  // collar
+  for(let x=4;x<=11;x++) p.push([x,9,R]);
+  // body
+  for(let x=4;x<=11;x++) for(let y=9;y<=13;y++) p.push([x,y,B]);
+  p.push([3,10,B],[3,11,B],[12,10,B],[12,11,B]);
+  // legs
+  [[4,14],[5,14],[4,15],[5,15],[10,14],[11,14],[10,15],[11,15]].forEach(([x,y])=>p.push([x,y,D]));
+  // tail
+  p.push([12,9,B],[13,8,B],[14,7,B]);
+  return p;
+}
+function spriteTiger() {
+  const O='#e8882a',D='#c05010',W='#f8e8c8',K='#111',P='#f4a0a0',BL='#222244',p=[];
+  // body
+  for(let x=3;x<=12;x++) for(let y=7;y<=13;y++) p.push([x,y,O]);
+  p.push([2,9,O],[2,10,O],[2,11,O],[13,9,O],[13,10,O],[13,11,O]);
+  // white belly
+  for(let x=5;x<=10;x++) for(let y=8;y<=13;y++) p.push([x,y,W]);
+  // stripes on body
+  p.push([4,8,D],[4,9,D],[11,8,D],[11,9,D]);
+  p.push([3,10,D],[3,11,D],[12,10,D],[12,11,D]);
+  p.push([5,12,D],[6,12,D],[9,12,D],[10,12,D]);
+  // head
+  for(let x=3;x<=12;x++) for(let y=2;y<=7;y++) p.push([x,y,O]);
+  p.push([2,4,O],[2,5,O],[13,4,O],[13,5,O]);
+  // white face
+  for(let x=4;x<=11;x++) for(let y=4;y<=7;y++) p.push([x,y,W]);
+  // ear
+  p.push([3,1,O],[4,1,O],[4,2,O],[11,1,O],[12,1,O],[11,2,O]);
+  p.push([3,2,D],[12,2,D]);
+  // forehead stripes
+  p.push([6,2,D],[7,2,D],[8,2,D],[9,2,D]);
+  p.push([5,3,D],[10,3,D]);
+  // eyes
+  p.push([5,4,K],[6,4,K],[9,4,K],[10,4,K]);
+  p.push([5,5,BL],[6,5,BL],[9,5,BL],[10,5,BL]);
+  // nose & mouth
+  p.push([7,6,P],[8,6,P],[7,7,K],[8,7,K]);
+  p.push([6,7,D],[9,7,D]);
+  // whisker dots
+  p.push([4,6,D],[5,6,D],[10,6,D],[11,6,D]);
+  // tail
+  p.push([13,12,O],[14,11,O],[15,10,D],[14,12,D],[13,13,D]);
+  // legs
+  for(let y=14;y<=15;y++) p.push([4,y,D],[5,y,D],[9,y,D],[10,y,D]);
+  return p;
+}
+function spriteMonkey() {
+  const B='#c88050',D='#8a5020',T='#e8b880',K='#222',P='#f4a0a0',p=[];
+  // long arms
+  for(let y=7;y<=12;y++) p.push([1,y,B],[2,y,B],[13,y,B],[14,y,B]);
+  // hands
+  p.push([0,12,D],[1,13,D],[2,13,D],[13,13,D],[14,13,D],[15,12,D]);
+  // body
+  for(let x=3;x<=12;x++) for(let y=7;y<=14;y++) p.push([x,y,B]);
+  // belly
+  for(let x=5;x<=10;x++) for(let y=9;y<=13;y++) p.push([x,y,T]);
+  // head
+  for(let x=3;x<=12;x++) for(let y=1;y<=7;y++) p.push([x,y,B]);
+  // big round ears
+  p.push([2,3,T],[2,4,T],[2,5,T],[13,3,T],[13,4,T],[13,5,T]);
+  p.push([1,3,B],[1,4,B],[1,5,B],[14,3,B],[14,4,B],[14,5,B]);
+  // face muzzle
+  for(let x=4;x<=11;x++) for(let y=4;y<=7;y++) p.push([x,y,T]);
+  // eyes
+  p.push([5,3,K],[6,3,K],[9,3,K],[10,3,K]);
+  p.push([5,4,D],[9,4,D]);
+  // nose
+  p.push([7,5,D],[8,5,D],[7,6,P],[8,6,P]);
+  // big smile
+  p.push([5,7,K],[6,7,K],[9,7,K],[10,7,K]);
+  for(let x=6;x<=9;x++) p.push([x,8,K]);
+  // feet
+  for(let y=14;y<=15;y++) p.push([4,y,D],[5,y,D],[9,y,D],[10,y,D]);
+  // tail curl
+  p.push([12,14,D],[13,15,D],[14,14,D],[14,13,D]);
+  return p;
+}
+function spriteCapybara() {
+  const B='#a07848',D='#6a4e28',T='#c8a868',K='#222',W='#f0e8d8',P='#d49878',p=[];
+  // chunky body
+  for(let x=2;x<=14;x++) for(let y=7;y<=14;y++) p.push([x,y,B]);
+  // lighter belly stripe
+  for(let x=4;x<=12;x++) for(let y=10;y<=13;y++) p.push([x,y,T]);
+  // big square head (capybaras have very rectangular heads)
+  for(let x=3;x<=12;x++) for(let y=1;y<=8;y++) p.push([x,y,B]);
+  // slightly lighter snout — wide and flat
+  for(let x=4;x<=11;x++) for(let y=5;y<=8;y++) p.push([x,y,T]);
+  // nostrils (big and prominent)
+  p.push([5,6,D],[6,6,D],[9,6,D],[10,6,D]);
+  // eyes — small, set high
+  p.push([4,3,K],[5,3,K],[10,3,K],[11,3,K]);
+  p.push([4,4,D],[10,4,D]);
+  // ears — small rounded bumps on top
+  p.push([4,1,B],[5,1,B],[5,0,B],[10,1,B],[11,1,B],[10,0,B]);
+  p.push([4,0,D],[11,0,D]);
+  // mouth line
+  p.push([6,7,D],[7,7,D],[8,7,D],[9,7,D]);
+  // teeth (big front teeth, capybaras are rodents)
+  p.push([7,8,W],[8,8,W],[7,9,W],[8,9,W]);
+  // short stubby legs
+  for(let y=14;y<=15;y++) p.push([3,y,D],[4,y,D],[5,y,D],[9,y,D],[10,y,D],[11,y,D]);
+  // tiny tail nub
+  p.push([14,13,D],[15,13,D],[15,12,D]);
+  return p;
+}
+
+const PLAYERS = [
+  {name:'Dog',      color:'#c8a46e', sprite:spriteDog()      },
+  {name:'Tiger',    color:'#e8882a', sprite:spriteTiger()    },
+  {name:'Monkey',   color:'#c88050', sprite:spriteMonkey()   },
+  {name:'Capybara', color:'#a07848', sprite:spriteCapybara() },
+];
+
+// ============================================================
+//  NPC SPRITES
+// ============================================================
+function npcBunny(){
+  const W='#f0f0f0',P='#f4a0c0',K='#222',R='#e06060',p=[];
+  for(let x=3;x<=12;x++) for(let y=5;y<=14;y++) p.push([x,y,W]);
+  // ears
+  for(let y=0;y<=4;y++){p.push([4,y,W],[5,y,W],[10,y,W],[11,y,W]);}
+  for(let y=1;y<=4;y++){p.push([4,y,P],[5,y,P],[10,y,P],[11,y,P]);}
+  p.push([5,7,K],[6,7,K],[9,7,K],[10,7,K],[5,8,R],[9,8,R]);
+  p.push([7,9,P],[8,9,P],[6,10,K],[9,10,K]);
+  p.push([3,15,W],[4,15,W],[5,15,W],[10,15,W],[11,15,W],[12,15,W]);
+  return p;
+}
+function npcMouse(){
+  const G='#c8a0c8',D='#906090',K='#222',P='#f4a0a0',W='#fff',p=[];
+  for(let x=3;x<=12;x++) for(let y=5;y<=14;y++) p.push([x,y,G]);
+  for(let x=2;x<=4;x++) for(let y=3;y<=5;y++) p.push([x,y,G]);
+  for(let x=11;x<=13;x++) for(let y=3;y<=5;y++) p.push([x,y,G]);
+  p.push([3,4,P],[12,4,P]);
+  p.push([5,7,K],[6,7,K],[9,7,K],[10,7,K],[5,8,W],[9,8,W]);
+  for(let x=6;x<=9;x++) p.push([x,9,P]);
+  p.push([7,10,K],[8,10,K]);
+  p.push([2,9,D],[3,9,D],[12,9,D],[13,9,D]);
+  p.push([13,14,D],[14,13,D],[15,12,D],[15,11,D]);
+  return p;
+}
+function npcSquirrel(){
+  const B='#c86428',D='#7a3c10',T='#e8a060',K='#222',W='#f0e8d0',p=[];
+  for(let x=3;x<=12;x++) for(let y=5;y<=14;y++) p.push([x,y,B]);
+  for(let x=11;x<=15;x++) for(let y=4;y<=12;y++) p.push([x,y,D]);
+  for(let x=12;x<=14;x++) for(let y=5;y<=11;y++) p.push([x,y,B]);
+  for(let x=5;x<=9;x++) for(let y=8;y<=13;y++) p.push([x,y,T]);
+  p.push([3,4,B],[4,4,B],[4,3,B],[11,4,B],[12,4,B],[11,3,B]);
+  for(let x=4;x<=11;x++) for(let y=5;y<=8;y++) p.push([x,y,B]);
+  p.push([5,6,K],[6,6,K],[9,6,K],[10,6,K]);
+  p.push([7,8,D],[8,8,D]);
+  for(let x=5;x<=9;x++) p.push([x,9,W]);
+  return p;
+}
+function npcCat(){
+  const G='#888',D='#555',W='#fff',K='#222',GR='#50c850',P='#f4a0a0',p=[];
+  for(let x=3;x<=12;x++) for(let y=5;y<=14;y++) p.push([x,y,G]);
+  p.push([3,4,G],[4,4,G],[4,3,G],[4,2,G],[3,5,G]);
+  p.push([11,4,G],[12,4,G],[11,3,G],[11,2,G],[12,5,G]);
+  p.push([4,3,P],[11,3,P]);
+  for(let x=4;x<=11;x++) for(let y=5;y<=9;y++) p.push([x,y,G]);
+  p.push([5,6,K],[6,6,K],[9,6,K],[10,6,K]);
+  p.push([5,7,GR],[6,7,GR],[9,7,GR],[10,7,GR]);
+  p.push([7,8,P],[8,8,P]);
+  p.push([1,8,D],[2,8,D],[3,8,D],[12,8,D],[13,8,D],[14,8,D]);
+  for(let x=5;x<=10;x+=2){p.push([x,10,D],[x,11,D]);}
+  p.push([12,13,G],[13,12,G],[14,11,G]);
+  return p;
+}
+function npcDeer(){
+  const T='#c8a050',D='#8a6820',W='#f0e8c8',K='#222',B='#a06830',p=[];
+  for(let x=3;x<=12;x++) for(let y=6;y<=14;y++) p.push([x,y,T]);
+  p.push([4,0,B],[4,1,B],[4,2,B],[3,0,B],[3,1,B],[5,0,B]);
+  p.push([11,0,B],[11,1,B],[11,2,B],[12,0,B],[12,1,B],[10,0,B]);
+  for(let y=4;y<=6;y++) for(let x=5;x<=10;x++) p.push([x,y,T]);
+  for(let x=4;x<=11;x++) for(let y=1;y<=5;y++) p.push([x,y,T]);
+  for(let x=5;x<=10;x++) for(let y=2;y<=5;y++) p.push([x,y,W]);
+  p.push([5,3,K],[6,3,K],[9,3,K],[10,3,K]);
+  p.push([7,5,D],[8,5,D]);
+  p.push([5,9,W],[5,10,W],[9,9,W],[10,10,W],[7,11,W]);
+  for(let y=14;y<=15;y++){p.push([4,y,D],[5,y,D],[9,y,D],[10,y,D]);}
+  return p;
+}
+function npcBear(){
+  const B='#8b5e3c',D='#5a3520',T='#c8a060',K='#222',P='#f4a0a0',p=[];
+  for(let x=2;x<=13;x++) for(let y=5;y<=14;y++) p.push([x,y,B]);
+  for(let x=2;x<=4;x++) for(let y=3;y<=5;y++) p.push([x,y,B]);
+  for(let x=11;x<=13;x++) for(let y=3;y<=5;y++) p.push([x,y,B]);
+  p.push([3,4,D],[12,4,D]);
+  for(let x=3;x<=12;x++) for(let y=5;y<=10;y++) p.push([x,y,B]);
+  for(let x=5;x<=10;x++) for(let y=7;y<=10;y++) p.push([x,y,T]);
+  p.push([4,6,K],[5,6,K],[10,6,K],[11,6,K]);
+  p.push([7,8,K],[8,8,K],[7,9,D],[8,9,D]);
+  p.push([2,15,D],[3,15,D],[12,15,D],[13,15,D]);
+  return p;
+}
+function npcOwl(){
+  const B='#a07840',D='#6a5020',W='#f0e8c8',K='#222',Y='#ffd700',O='#e08800',p=[];
+  for(let x=0;x<=3;x++) for(let y=7;y<=13;y++) p.push([x,y,D]);
+  for(let x=12;x<=15;x++) for(let y=7;y<=13;y++) p.push([x,y,D]);
+  for(let x=3;x<=12;x++) for(let y=6;y<=14;y++) p.push([x,y,B]);
+  for(let x=5;x<=10;x++) for(let y=8;y<=13;y++) p.push([x,y,W]);
+  for(let x=3;x<=12;x++) for(let y=1;y<=6;y++) p.push([x,y,B]);
+  p.push([3,0,D],[4,0,D],[11,0,D],[12,0,D],[3,1,D],[12,1,D]);
+  for(let x=4;x<=6;x++) for(let y=2;y<=5;y++) p.push([x,y,W]);
+  for(let x=9;x<=11;x++) for(let y=2;y<=5;y++) p.push([x,y,W]);
+  p.push([5,3,Y],[5,4,Y],[10,3,Y],[10,4,Y]);
+  p.push([5,3,K],[10,3,K]);
+  p.push([7,5,O],[8,5,O],[7,6,O],[8,6,O]);
+  p.push([5,15,O],[4,15,O],[6,15,O],[9,15,O],[10,15,O],[11,15,O]);
+  return p;
+}
+function npcTurtle(){
+  const G='#3a8a3a',D='#1e5c1e',L='#70c870',K='#222',S='#a0d8a0',O='#e08000',p=[];
+  for(let x=2;x<=13;x++) for(let y=5;y<=12;y++) p.push([x,y,G]);
+  // shell hexes
+  for(let x=3;x<=12;x+=3) for(let y=6;y<=11;y+=2) p.push([x,y,D],[x+1,y,D],[x,y+1,D]);
+  p.push([5,6,L],[9,7,L],[6,9,L]);
+  for(let x=6;x<=10;x++) for(let y=2;y<=5;y++) p.push([x,y,L]);
+  p.push([5,4,L],[11,4,L]);
+  p.push([6,3,K],[7,3,K],[9,3,K],[10,3,K],[6,4,S],[9,4,S]);
+  p.push([7,5,D],[8,5,D]);
+  for(let y=11;y<=14;y++){p.push([2,y,L],[3,y,L],[12,y,L],[13,y,L]);}
+  p.push([1,15,L],[2,15,L],[3,15,L],[12,15,L],[13,15,L],[14,15,L]);
+  return p;
+}
+function npcBeaver(){
+  const B='#8b5e3c',D='#5a3520',T='#c89060',K='#222',Y='#e8d040',O='#e09040',p=[];
+  for(let x=3;x<=12;x++) for(let y=5;y<=12;y++) p.push([x,y,B]);
+  p.push([3,4,B],[4,4,B],[4,3,B],[11,4,B],[12,4,B],[11,3,B]);
+  p.push([3,3,D],[12,3,D]);
+  for(let x=4;x<=11;x++) for(let y=5;y<=9;y++) p.push([x,y,B]);
+  p.push([5,6,K],[6,6,K],[9,6,K],[10,6,K]);
+  for(let x=7;x<=8;x++) for(let y=8;y<=10;y++) p.push([x,y,Y]);
+  p.push([7,10,O],[8,10,O]);
+  for(let x=4;x<=11;x++) for(let y=12;y<=15;y++) p.push([x,y,D]);
+  for(let x=5;x<=10;x++) for(let y=12;y<=14;y++) p.push([x,y,B]);
+  p.push([5,12,D],[7,12,D],[9,12,D],[6,13,D],[8,13,D],[10,13,D]);
+  p.push([3,13,B],[2,14,B],[13,13,B],[14,14,B]);
+  return p;
+}
+function npcMonkey(){
+  const B='#c88050',D='#8a5020',T='#e8b880',K='#222',P='#f4a0a0',R='#e06060',p=[];
+  for(let y=6;y<=12;y++){p.push([0,y,B],[1,y,B],[14,y,B],[15,y,B]);}
+  for(let x=2;x<=13;x++) for(let y=6;y<=14;y++) p.push([x,y,B]);
+  for(let x=5;x<=10;x++) for(let y=8;y<=13;y++) p.push([x,y,T]);
+  for(let x=3;x<=12;x++) for(let y=1;y<=6;y++) p.push([x,y,B]);
+  for(let x=4;x<=11;x++) for(let y=3;y<=6;y++) p.push([x,y,T]);
+  p.push([5,3,K],[6,3,K],[9,3,K],[10,3,K],[5,4,D],[9,4,D]);
+  p.push([7,5,D],[8,5,D],[7,6,P],[8,6,P]);
+  for(let x=6;x<=9;x++) p.push([x,7,K]);
+  p.push([5,7,T],[10,7,T]);
+  p.push([2,3,T],[2,4,T],[2,5,T],[13,3,T],[13,4,T],[13,5,T]);
+  p.push([13,14,D],[14,15,D],[15,14,D],[15,13,D]);
+  return p;
+}
+function npcHedgehog(){
+  const D='#606040',L='#a0a060',T='#e8c090',K='#222',B='#8b5e3c',p=[];
+  for(let x=2;x<=13;x++) for(let y=6;y<=13;y++) p.push([x,y,L]);
+  for(let x=3;x<=12;x+=2){p.push([x,5,D],[x,4,D],[x+1,5,D],[x+1,4,D]);}
+  p.push([2,6,D],[1,5,D],[13,6,D],[14,5,D],[2,7,D],[1,6,D],[13,7,D],[14,6,D]);
+  for(let x=5;x<=11;x++) for(let y=7;y<=11;y++) p.push([x,y,T]);
+  p.push([6,8,K],[7,8,K],[9,8,K],[10,8,K],[6,9,D]);
+  p.push([8,10,K],[9,10,K]);
+  [[4,14],[5,14],[4,15],[5,15],[9,14],[10,14],[9,15],[10,15]].forEach(([x,y])=>p.push([x,y,B]));
+  return p;
+}
+function npcDragon(){
+  const R='#c82828',D='#8a1010',O='#e06020',Y='#ffd700',K='#222',F='#ff6600',F2='#ffcc00',p=[];
+  for(let i=0;i<5;i++){p.push([13+i,8+i,D],[13+i,9+i,R]);}
+  for(let x=0;x<=4;x++) for(let y=4;y<=10;y++) p.push([x,y,D]);
+  for(let x=11;x<=15;x++) for(let y=4;y<=10;y++) p.push([x,y,D]);
+  for(let x=1;x<=3;x++) for(let y=5;y<=9;y++) p.push([x,y,R]);
+  for(let x=12;x<=14;x++) for(let y=5;y<=9;y++) p.push([x,y,R]);
+  for(let x=3;x<=12;x++) for(let y=6;y<=14;y++) p.push([x,y,R]);
+  for(let x=5;x<=9;x++) for(let y=8;y<=13;y++) p.push([x,y,O]);
+  for(let y=8;y<=13;y+=2) for(let x=5;x<=9;x+=2) p.push([x,y,D]);
+  for(let x=3;x<=12;x++) for(let y=1;y<=6;y++) p.push([x,y,R]);
+  p.push([3,0,D],[4,0,D],[11,0,D],[12,0,D],[3,1,D],[12,1,D]);
+  p.push([4,3,Y],[5,3,Y],[4,4,K],[5,4,K]);
+  p.push([10,3,Y],[11,3,Y],[10,4,K],[11,4,K]);
+  for(let x=5;x<=10;x++) p.push([x,6,D]);
+  p.push([6,7,F2],[7,7,F2],[8,7,F2],[5,8,F],[9,8,F],[7,8,Y],[8,8,Y]);
+  return p;
+}
+
+const NPC_DEFS = [
+  {id:'a',name:'Benny Bunny',    color:'#f0f0f0',sprite:npcBunny()    },
+  {id:'b',name:'Mia Mouse',      color:'#c8a0c8',sprite:npcMouse()    },
+  {id:'c',name:'Sam Squirrel',   color:'#e8a060',sprite:npcSquirrel() },
+  {id:'d',name:'Felix Cat',      color:'#aaaaaa',sprite:npcCat()      },
+  {id:'e',name:'Daisy Deer',     color:'#c8a050',sprite:npcDeer()     },
+  {id:'f',name:'Bruno Bear',     color:'#c8a060',sprite:npcBear()     },
+  {id:'g',name:'Ollie Owl',      color:'#e8d090',sprite:npcOwl()      },
+  {id:'h',name:'Tina Turtle',    color:'#70c870',sprite:npcTurtle()   },
+  {id:'i',name:'Benny Beaver',   color:'#c89060',sprite:npcBeaver()   },
+  {id:'j',name:'Milo Monkey',    color:'#e8b880',sprite:npcMonkey()   },
+  {id:'k',name:'Spike Hedgehog', color:'#a0a060',sprite:npcHedgehog() },
+  {id:'l',name:'Drake Dragon',   color:'#ff6060',sprite:npcDragon()   },
+];
+const NPC_MAP = {};
+NPC_DEFS.forEach(n => NPC_MAP[n.id]=n);
+
+// ============================================================
+//  MAPS 1–5  (imported from designer spreadsheet)
+// ============================================================
+const MAP1 = [
+  '#S##################',  // 0
+  '#...##########g.####',  // 1
+  '#....b##f#####..####',  // 2
+  '#a..####..........##',  // 3
+  '##..######........##',  // 4
+  '##..###.e#..####..##',  // 5
+  '##..####.#..#h....##',  // 6
+  '##..####.#..#.....##',  // 7
+  '#...........####..##',  // 8
+  '#c#.........####..##',  // 9
+  '#.##.########.....##',  // 10
+  '####d####j###....i##',  // 11
+  '#########......#####',  // 12
+  '#########k###.....##',  // 13
+  '#################l##',  // 14
+];
+const MAP2 = [
+  '#S##################',  // 0
+  '#.#####e..##########',  // 1
+  '#.##...#.#........##',  // 2
+  '#a##.#.....###.##.##',  // 3
+  '#.##.#####.###.##..k',  // 4
+  '........#j.#..i##.##',  // 5
+  '.######.##...####.##',  // 6
+  'b...c##.##.###....##',  // 7
+  '.######.##.##..#####',  // 8
+  '.##.....##.##.######',  // 9
+  '.##.######.#....g###',  // 10
+  '.##d..###f.#.##..###',  // 11
+  '.###.......#.##.####',  // 12
+  '.....#####h..##...##',  // 13
+  '#################l##',  // 14
+];
+const MAP3 = [
+  '#S##################',  // 0
+  '#..##....#c.....#...',  // 1
+  '#..a..##.#....e##.#.',  // 2
+  '#######..###.###..#.',  // 3
+  '#b.####..###..##..#.',  // 4
+  '#..#.............f#.',  // 5
+  '##.#.##############.',  // 6
+  '##....d###j.........',  // 7
+  '#..###.#####.####.##',  // 8
+  '#..###.#..##.###k.##',  // 9
+  '#.###..#.......#....',  // 10
+  '#.###..#...###.#.##.',  // 11
+  '#.#...##..h##....##.',  // 12
+  '#g..#.....##i...#...',  // 13
+  '#################l##',  // 14
+];
+const MAP4 = [
+  '#S##################',  // 0
+  '#.....###b..##j##...',  // 1
+  '#.###..###...#.....#',  // 2
+  '#.####..##.#.###.#.#',  // 3
+  '#.#..a#.##.#..#..#.#',  // 4
+  '#.#.##..##.##.#.##.#',  // 5
+  '#.#.#..#...##...##.#',  // 6
+  '#.....#..#.#h#.#i#.#',  // 7
+  '#.##.#c.##.#.###.#.#',  // 8
+  '#..#..##d#.#.....#.#',  // 9
+  '#.###..#...#####.#.#',  // 10
+  '#e####..##.#####.#.#',  // 11
+  '#.#g..#.##.#####...#',  // 12
+  '#.f##..........k##.#',  // 13
+  '##################l#',  // 14
+];
+const MAP5 = [
+  '#S##################',  // 0
+  '#.###e.......#.....#',  // 1
+  '#...###.##.#.#g#.#.#',  // 2
+  '###.a##.####f###.#h#',  // 3
+  '####.......###...###',  // 4
+  '#b.##.####.##..#...#',  // 5
+  '##..#.#j##....##.#.#',  // 6
+  '###...#..#######.#.#',  // 7
+  '#...####.##..k#..#.#',  // 8
+  '#.###.#...#.##..##.#',  // 9
+  '#.###...#......###.#',  // 10
+  '#c###.###########i.#',  // 11
+  '###......##....#####',  // 12
+  '#d..####....##......',  // 13
+  '###################l',  // 14
+];
+
+const MAPS = [MAP1, MAP2, MAP3, MAP4, MAP5];
+const COLS = 20, ROWS = 15, TILE = 32;
+
+// ============================================================
+//  LEVEL CONFIG  — coin requirements and number ranges per level
+// ============================================================
+const LEVEL_CONFIG = [
+  null,                              // index 0 unused
+  { coins: 5,  lo: 11,  hi: 50  },  // Level 1
+  { coins: 6,  lo: 51,  hi: 99  },  // Level 2
+  { coins: 7,  lo: 101, hi: 333 },  // Level 3
+  { coins: 8,  lo: 101, hi: 667 },  // Level 4
+  { coins: 10, lo: 101, hi: 999 },  // Level 5
+];
+
+// ============================================================
+//  MATH
+// ============================================================
+function randInt(lo,hi){return Math.floor(Math.random()*(hi-lo+1))+lo;}
+
+function randNonTen(lo, hi) {
+  let v;
+  do { v = randInt(lo, hi); } while (v % 10 === 0);
+  return v;
+}
+
+function makeQ(level) {
+  const cfg = LEVEL_CONFIG[level];
+  const { lo, hi } = cfg;
+  const sub = Math.random() < 0.5;
+  let a, b, ans;
+  if (sub) {
+    a = randNonTen(lo + 1, hi);
+    b = randNonTen(lo, a - 1);
+    ans = a - b;
+  } else {
+    a = randNonTen(lo, hi);
+    b = randNonTen(lo, hi);
+    ans = a + b;
+  }
+  return { q: `${a} ${sub ? '-' : '+'} ${b} = ?`, ans };
+}
+
+// ============================================================
+//  SPEECHES
+// ============================================================
+const SPEECHES = {
+  a:'Hi! I\'m Benny Bunny!\nSolve my problem and\nearnyourself a gold coin! 🪙',
+  b:'Squeak! Mia Mouse here!\nAnswer correctly and\nI\'ll give you a coin! 🪙',
+  c:'Chitter! Sam Squirrel!\nHelp me with this problem\nand earn a coin! 🪙',
+  d:'Meow! Felix Cat purrs...\nSolve this and I\'ll\ngive you a gold coin! 🪙',
+  e:'La la! Daisy Deer!\nAnswer my question\nfor a shiny coin! 🪙',
+  f:'ROAR! Bruno Bear!\nGet this right and\nI\'ll give you a coin! 🪙',
+  g:'Hoo hoo! Ollie Owl!\nThink carefully...\nA coin awaits! 🪙',
+  h:'Slowly... Tina Turtle.\nGet it right and earn\none gold coin! 🪙',
+  i:'SLAP! Benny Beaver!\nAnswer my big problem\nfor a coin! 🪙',
+  j:'Ooh ooh! Milo Monkey!\nHUGE number challenge!\nWin a coin! 🪙',
+  k:'SPIKE! Hedgehog here!\nSolve this tough one\nfor a gold coin! 🪙',
+};
+
+// ============================================================
+//  FOG OF WAR
+// ============================================================
+function makeRevealed() {
+  return Array.from({length:ROWS}, ()=>new Array(COLS).fill(false));
+}
+function revealAround(cx, cy, radius) {
+  const r2=radius*radius;
+  for(let dy=-radius;dy<=radius;dy++){
+    for(let dx=-radius;dx<=radius;dx++){
+      if(dx*dx+dy*dy<=r2){
+        const nx=cx+dx, ny=cy+dy;
+        if(nx>=0&&ny>=0&&nx<COLS&&ny<ROWS) G.revealed[ny][nx]=true;
+      }
+    }
+  }
+}
+
+// ============================================================
+//  GAME STATE
+// ============================================================
+let G = {
+  screen:'title', playerIdx:-1,
+  px:1, py:1, facing:'right',
+  solved:new Set(), coins:0,
+  curNpc:null, curQ:null, quizMode:'math',
+  frame:0, moveAccum:0,
+  confetti:[],
+  revealed:makeRevealed(),
+  level:1, seenQs:new Set(),
+};
+
+// ============================================================
+//  CANVAS
+// ============================================================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+// ============================================================
+//  CHARACTER SELECT
+// ============================================================
+const charSel = document.getElementById('char-select');
+const startBtn = document.getElementById('start-btn');
+
+PLAYERS.forEach((pl,i) => {
+  const card = document.createElement('div');
+  card.className = 'char-card';
+  const c = document.createElement('canvas');
+  c.width=64; c.height=64;
+  c.style.cssText='width:64px;height:64px;image-rendering:pixelated;';
+  const cx=c.getContext('2d');
+  cx.imageSmoothingEnabled=false;
+  px(cx, pl.sprite, 0, 0, 4);
+  const lbl=document.createElement('span');
+  lbl.textContent=pl.name;
+  card.append(c, lbl);
+  card.addEventListener('click',()=>{
+    document.querySelectorAll('.char-card').forEach(e=>e.classList.remove('selected'));
+    card.classList.add('selected');
+    G.playerIdx=i;
+    startBtn.disabled=false;
+    document.getElementById('select-hint').textContent=pl.name+' selected! ✓';
+  });
+  charSel.appendChild(card);
+});
+startBtn.addEventListener('click', ()=>startGame(1));
+
+function startGame(level){
+  level = level||1;
+  const M = MAPS[level-1];
+  let sx=1,sy=1;
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(M[r][c]==='S'){sx=c;sy=r;}
+  G={screen:'play',playerIdx:G.playerIdx,px:sx,py:sy,facing:'right',
+     solved:new Set(),coins:0,curNpc:null,curQ:null,quizMode:'math',
+     frame:0,moveAccum:0,confetti:[],
+     revealed:makeRevealed(), level, seenQs:new Set()};
+  revealAround(sx, sy, 1);
+  document.getElementById('title-screen').style.display='none';
+  const gw=document.getElementById('game-wrap');
+  gw.style.display='flex';
+  document.getElementById('hud-char').textContent='Hero: '+PLAYERS[G.playerIdx].name;
+  updateHUD();
+  Music.start();
+  requestAnimationFrame(gameLoop);
+}
+
+// ============================================================
+//  INPUT
+// ============================================================
+const KEYS={};
+document.addEventListener('keydown',e=>{
+  KEYS[e.key]=true;
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+});
+document.addEventListener('keyup',e=>{ KEYS[e.key]=false; });
+
+// ============================================================
+//  MOVEMENT
+// ============================================================
+function tryMove(dx,dy){
+  const M=MAPS[G.level-1];
+  const nx=G.px+dx, ny=G.py+dy;
+  if(nx<0||ny<0||nx>=COLS||ny>=ROWS) return;
+  const t=M[ny][nx];
+  if(t==='#') return;
+  // Dragon coin gate
+  if(t==='l'){
+    if(G.coins>=LEVEL_CONFIG[G.level].coins){ G.px=nx; G.py=ny; revealAround(nx,ny,1); triggerWin(); }
+    else { openDragonGate(); }
+    return;
+  }
+  // Regular NPC — bump to trigger quiz, but player doesn't move onto NPC tile
+  if('abcdefghijk'.includes(t) && !G.solved.has(t)){ openQuiz(t); return; }
+  // Move (includes already-solved NPC tiles and open floor)
+  G.px=nx; G.py=ny;
+  revealAround(nx, ny, 1);
+}
+
+// ============================================================
+//  QUIZ
+// ============================================================
+// Generate a question not yet seen this session (up to 50 attempts)
+function freshQ(level) {
+  for (let i = 0; i < 50; i++) {
+    const q = makeQ(level);
+    if (!G.seenQs.has(q.q)) { G.seenQs.add(q.q); return q; }
+  }
+  return makeQ(level);
+}
+function openDragonGate(){
+  G.screen='quiz'; G.curNpc='l'; G.quizMode='dragon';
+  const npc=NPC_MAP['l'];
+  const pc=document.getElementById('npc-portrait').getContext('2d');
+  pc.clearRect(0,0,64,64); pc.imageSmoothingEnabled=false;
+  px(pc, npc.sprite, 0, 0, 4);
+  document.getElementById('npc-name').textContent=npc.name;
+  document.getElementById('npc-speech').textContent=
+    `RAAAAR! You need ${LEVEL_CONFIG[G.level].coins} gold coins\nto pass through!\nYou only have ${G.coins}!\nFind more friends first!`;
+  document.getElementById('quiz-question').textContent='';
+  document.getElementById('quiz-feedback').textContent='';
+  document.getElementById('quiz-answer').style.display='none';
+  document.getElementById('quiz-submit').textContent='...FINE.';
+  document.getElementById('quiz-overlay').classList.add('active');
+}
+function openQuiz(id){
+  G.screen='quiz'; G.curNpc=id; G.quizMode='math';
+  G.curQ=freshQ(G.level);
+  const npc=NPC_MAP[id];
+  const pc=document.getElementById('npc-portrait').getContext('2d');
+  pc.clearRect(0,0,64,64); pc.imageSmoothingEnabled=false;
+  px(pc, npc.sprite, 0, 0, 4);
+  document.getElementById('npc-name').textContent=npc.name;
+  document.getElementById('npc-speech').textContent=SPEECHES[id]||'Solve my problem!';
+  document.getElementById('quiz-question').textContent=G.curQ.q;
+  document.getElementById('quiz-feedback').textContent='';
+  document.getElementById('quiz-feedback').style.color='#fff';
+  document.getElementById('quiz-answer').style.display='';
+  document.getElementById('quiz-input-row').style.display='flex';
+  document.getElementById('quiz-submit').textContent='OK!';
+  const ans=document.getElementById('quiz-answer');
+  ans.value='';
+  document.getElementById('quiz-overlay').classList.add('active');
+  setTimeout(()=>ans.focus(),50);
+}
+function closeQuiz(){
+  document.getElementById('quiz-overlay').classList.remove('active');
+  G.screen='play'; G.curNpc=null;
+}
+function submitAnswer(){
+  // Dragon gate mode: just close
+  if(G.quizMode==='dragon'){ closeQuiz(); return; }
+  // Math mode
+  const v=parseInt(document.getElementById('quiz-answer').value,10);
+  const fb=document.getElementById('quiz-feedback');
+  if(isNaN(v)){fb.textContent='Type a number!';fb.style.color='#ffaaaa';return;}
+  if(v===G.curQ.ans){
+    G.solved.add(G.curNpc);
+    G.coins++;
+    updateHUD();
+    fb.textContent=`✓ Correct! +1 🪙 (${G.coins}/${LEVEL_CONFIG[G.level].coins} coins)`;
+    fb.style.color='#ffd700';
+    setTimeout(()=>closeQuiz(),900);
+  } else {
+    fb.textContent='✗ Not quite — try again!';
+    fb.style.color='#ff8888';
+    G.curQ=freshQ(G.level);
+    document.getElementById('quiz-question').textContent=G.curQ.q;
+    const ans=document.getElementById('quiz-answer');
+    ans.value='';
+    setTimeout(()=>ans.focus(),50);
+  }
+}
+document.getElementById('quiz-submit').addEventListener('click',submitAnswer);
+document.getElementById('quiz-answer').addEventListener('keydown',e=>{if(e.key==='Enter')submitAnswer();});
+
+// ============================================================
+//  WIN
+// ============================================================
+function triggerWin(){
+  G.screen='win';
+  document.getElementById('quiz-overlay').classList.remove('active');
+  document.getElementById('win-screen').classList.add('active');
+  Music.pause();
+  Music.playWin();
+  const nextBtn=document.getElementById('next-level-btn');
+  const restartBtn=document.getElementById('restart-btn');
+  const cfg=LEVEL_CONFIG[G.level];
+  if(G.level < 5){
+    document.getElementById('win-msg').textContent=
+      `Level ${G.level} Complete!\nCoins earned: ${G.coins} / ${cfg.coins}\nFriends made: ${G.solved.size} / 11\n\nReady for Level ${G.level+1}? 🐉`;
+    nextBtn.style.display='inline-block';
+    nextBtn.textContent=`LEVEL ${G.level+1} →`;
+    restartBtn.textContent='PLAY AGAIN';
+  } else {
+    document.getElementById('win-msg').textContent=
+      `YOU BEAT ALL 5 LEVELS!\nCoins earned: ${G.coins} / ${cfg.coins}\nFriends made: ${G.solved.size} / 11\n\n🏆 Ultimate Math Hero! 🏆`;
+    nextBtn.style.display='none';
+    restartBtn.textContent='PLAY AGAIN';
+  }
+  const wc=document.getElementById('win-canvas');
+  const wctx=wc.getContext('2d');
+  const colors=['#ffd700','#ff6b6b','#88ff88','#6b9fff','#ff88ff','#88ffff','#ffaa44'];
+  G.confetti=Array.from({length:70},()=>({
+    x:Math.random()*640, y:Math.random()*-200,
+    vy:1.5+Math.random()*2.5, vx:(Math.random()-0.5)*2,
+    color:colors[Math.floor(Math.random()*colors.length)],
+    sz:4+Math.random()*6, rot:Math.random()*Math.PI*2,
+  }));
+  function draw(){
+    wctx.clearRect(0,0,640,180);
+    G.confetti.forEach(c=>{
+      c.y+=c.vy; c.x+=c.vx; c.rot+=0.08;
+      if(c.y>190){c.y=-10;c.x=Math.random()*640;}
+      wctx.save();
+      wctx.translate(c.x,c.y);
+      wctx.rotate(c.rot);
+      wctx.fillStyle=c.color;
+      wctx.fillRect(-c.sz/2,-c.sz/2,c.sz,c.sz);
+      wctx.restore();
+    });
+    if(G.screen==='win') requestAnimationFrame(draw);
+  }
+  draw();
+}
+document.getElementById('next-level-btn').addEventListener('click',()=>{
+  document.getElementById('win-screen').classList.remove('active');
+  Music.stop();
+  startGame(G.level + 1);
+});
+document.getElementById('restart-btn').addEventListener('click',()=>{
+  document.getElementById('win-screen').classList.remove('active');
+  Music.stop();
+  startGame(1);
+});
+
+// ============================================================
+//  HUD
+// ============================================================
+function updateHUD(){
+  const req = LEVEL_CONFIG[G.level].coins;
+  document.getElementById('hud-coins').textContent=`🪙 ${G.coins} / ${req} coins`;
+  document.getElementById('hud-npcs').textContent=`Friends: ${G.solved.size} / 11`;
+  document.getElementById('hud-level').textContent=`Level: ${G.level}`;
+}
+
+// ============================================================
+//  RENDER
+// ============================================================
+function renderTile(col,row,t){
+  const rx=col*TILE, ry=row*TILE;
+  // Fog of war
+  if(!G.revealed[row][col]){
+    ctx.fillStyle='#08080f';
+    ctx.fillRect(rx,ry,TILE,TILE);
+    return;
+  }
+  if(t==='#'){
+    ctx.fillStyle='#1a2a3a';
+    ctx.fillRect(rx,ry,TILE,TILE);
+    ctx.fillStyle='#253545';
+    ctx.fillRect(rx,ry,TILE,4);
+    ctx.fillStyle='#0d1520';
+    ctx.fillRect(rx,ry+TILE-2,TILE,2);
+    // brick lines
+    ctx.fillStyle='#1e2e3e';
+    const br=row%2;
+    if(br===0){
+      ctx.fillRect(rx+4,ry+8,TILE-8,1);
+      ctx.fillRect(rx+4,ry+18,TILE-8,1);
+      ctx.fillRect(rx+TILE/2,ry+4,1,TILE-8);
+    } else {
+      ctx.fillRect(rx+2,ry+8,TILE-4,1);
+      ctx.fillRect(rx+2,ry+20,TILE-4,1);
+      ctx.fillRect(rx+8,ry+4,1,TILE-8);
+    }
+  } else {
+    ctx.fillStyle='#2a4a2a';
+    ctx.fillRect(rx,ry,TILE,TILE);
+    ctx.fillStyle='#263526';
+    ctx.fillRect(rx,ry,1,TILE);
+    ctx.fillRect(rx,ry,TILE,1);
+    if(t==='S'){
+      ctx.fillStyle='rgba(68,136,204,0.35)';
+      ctx.fillRect(rx+2,ry+2,TILE-4,TILE-4);
+    }
+  }
+}
+
+function renderNPC(col,row,id){
+  if(!G.revealed[row][col]) return;
+  // Dragon gate — always visible treatment, pulsing gold
+  if(id==='l'){
+    const glow=0.5+0.5*Math.sin(G.frame*0.08);
+    ctx.fillStyle=`rgba(255,100,100,${0.15+0.15*glow})`;
+    ctx.fillRect(col*TILE,row*TILE,TILE,TILE);
+    px(ctx, NPC_MAP['l'].sprite, col*TILE, row*TILE, 2);
+    const bob=Math.sin(G.frame*0.08)*2;
+    ctx.fillStyle='rgba(0,0,0,0.8)';
+    ctx.fillRect(col*TILE-10,row*TILE-17+bob,TILE+20,12);
+    ctx.fillStyle='#ff8888';
+    ctx.font='6px "Press Start 2P",monospace';
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText(G.coins>=8?'ENTER!':'Need 8 🪙',col*TILE+TILE/2,row*TILE-16+bob);
+    return;
+  }
+  if(G.solved.has(id)){
+    ctx.globalAlpha=0.22;
+    px(ctx, NPC_MAP[id].sprite, col*TILE, row*TILE, 2);
+    ctx.globalAlpha=1;
+    ctx.fillStyle='#ffd700';
+    ctx.font='16px serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🪙',col*TILE+TILE/2,row*TILE+TILE/2);
+  } else {
+    px(ctx, NPC_MAP[id].sprite, col*TILE, row*TILE, 2);
+    const bob=Math.sin(G.frame*0.08+col)*2;
+    ctx.fillStyle='rgba(0,0,0,0.72)';
+    ctx.fillRect(col*TILE-6,row*TILE-17+bob,TILE+12,12);
+    ctx.fillStyle=NPC_MAP[id].color;
+    ctx.font='6px "Press Start 2P",monospace';
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText(NPC_MAP[id].name.split(' ')[0],col*TILE+TILE/2,row*TILE-16+bob);
+  }
+}
+
+function renderPlayer(){
+  const pl=PLAYERS[G.playerIdx];
+  const bob=Math.sin(G.frame*0.15)*1.5;
+  const bx=G.px*TILE, by=G.py*TILE+bob;
+  ctx.save();
+  if(G.facing==='left'){
+    ctx.translate(bx+TILE,by);
+    ctx.scale(-1,1);
+    px(ctx, pl.sprite, 0, 0, 2);
+  } else {
+    px(ctx, pl.sprite, bx, by, 2);
+  }
+  ctx.restore();
+  ctx.fillStyle='rgba(0,0,0,0.7)';
+  ctx.fillRect(G.px*TILE-8,G.py*TILE-14+bob,TILE+16,12);
+  ctx.fillStyle='#ffd700';
+  ctx.font='6px "Press Start 2P",monospace';
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillText('YOU',G.px*TILE+TILE/2,G.py*TILE-13+bob);
+}
+
+function render(){
+  const M=MAPS[G.level-1];
+  ctx.clearRect(0,0,640,480);
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) renderTile(c,r,M[r][c]);
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const t=M[r][c];
+    if('abcdefghijkl'.includes(t)) renderNPC(c,r,t);
+  }
+  renderPlayer();
+}
+
+// ============================================================
+//  GAME LOOP
+// ============================================================
+const MOVE_DELAY=160;
+let lastT=0;
+
+function gameLoop(ts){
+  const dt=ts-lastT; lastT=ts; G.frame++;
+  if(G.screen==='play'){
+    G.moveAccum+=dt;
+    if(G.moveAccum>=MOVE_DELAY){
+      G.moveAccum=0;
+      if(KEYS['ArrowUp']   ||KEYS['w']||KEYS['W']){tryMove(0,-1);G.facing='right';}
+      else if(KEYS['ArrowDown'] ||KEYS['s']||KEYS['S']){tryMove(0,1);G.facing='right';}
+      else if(KEYS['ArrowLeft'] ||KEYS['a']||KEYS['A']){tryMove(-1,0);G.facing='left';}
+      else if(KEYS['ArrowRight']||KEYS['d']||KEYS['D']){tryMove(1,0);G.facing='right';}
+    }
+  }
+  if(G.screen!=='title') render();
+  requestAnimationFrame(gameLoop);
+}
+// ============================================================
+//  CHIPTUNE MUSIC ENGINE
+// ============================================================
+const Music = (() => {
+  let actx = null, masterGain = null;
+  let beatInterval = null, beatStep = 0, arpStep = 0;
+  let muted = false;
+
+  // Frequencies
+  const C4=261.63,D4=293.66,E4=329.63,G4=392.00,A4=440.00,B4=493.88;
+  const C5=523.25,D5=587.33,E5=659.25,G5=783.99,A5=880.00;
+
+  // 48-step melody (square wave) — C major pentatonic, slower and wandering
+  const MELODY = [
+    C5,0,G4,0,  A4,0,E5,0,
+    D5,0,C5,0,  G5,0,0,0,
+    E5,0,D5,C5, A4,0,G4,0,
+    C5,E5,G5,0, E5,D5,C5,0,
+    A4,0,C5,0,  D5,E5,G5,0,
+    A5,0,G5,E5, D5,0,C5,0,
+  ];
+  // 48-step bass (triangle wave)
+  const BASS = [
+    C4,0,0,0,  E4,0,G4,0,
+    C4,0,0,0,  G4,0,0,0,
+    A4,0,E4,0, C4,0,0,0,
+    C4,0,G4,0, E4,0,C4,0,
+    A4,0,0,0,  D4,0,G4,0,
+    C4,0,E4,0, G4,0,C4,0,
+  ];
+  // 24-step sparkle arpeggio (sine, high octave)
+  const ARP = [
+    C4,E4,G4,C5, A4,C5,E5,A5,
+    G4,B4,D5,G5, E4,G4,B4,E5,
+    D4,G4,A4,D5, C4,E4,G4,C5,
+  ];
+
+  const BPM = 134;
+  const NOTE = (60 / BPM) / 2 * 1000; // eighth note = ~224ms — 48 steps ≈ 10.7s loop
+
+  function playNote(type, freq, gainVal, dur) {
+    if (!actx || muted) return;
+    const o = actx.createOscillator();
+    const g = actx.createGain();
+    o.type = type;
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(gainVal, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + dur);
+    o.connect(g);
+    g.connect(masterGain);
+    o.start();
+    o.stop(actx.currentTime + dur);
+  }
+
+  function tick() {
+    const i = beatStep % MELODY.length;
+    const a = arpStep % ARP.length;
+    const dur = NOTE / 1000;
+
+    if (MELODY[i]) playNote('square',   MELODY[i],     0.15, dur * 0.85);
+    if (BASS[i])   playNote('triangle', BASS[i] / 2,   0.20, dur * 0.70);
+    if (beatStep % 2 === 0 && ARP[a]) {
+      playNote('sine', ARP[a] * 2, 0.07, dur * 0.40);
+      arpStep++;
+    }
+    beatStep++;
+  }
+
+  function start() {
+    if (beatInterval) return;
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = actx.createGain();
+    masterGain.gain.value = 0.5;
+    masterGain.connect(actx.destination);
+    beatStep = 0; arpStep = 0;
+    tick();
+    beatInterval = setInterval(tick, NOTE);
+  }
+
+  function pause() {
+    if (beatInterval) { clearInterval(beatInterval); beatInterval = null; }
+  }
+
+  function resume() {
+    if (!actx || beatInterval) return;
+    tick();
+    beatInterval = setInterval(tick, NOTE);
+  }
+
+  function stop() {
+    if (beatInterval) { clearInterval(beatInterval); beatInterval = null; }
+    if (actx) { actx.close(); actx = null; }
+  }
+
+  function toggleMute() {
+    muted = !muted;
+    if (masterGain) masterGain.gain.value = muted ? 0 : 0.5;
+    document.getElementById('mute-btn').textContent = muted ? '♪ OFF' : '♪ ON';
+  }
+
+  // ── WIN JINGLE ──────────────────────────────────────────────
+  const WIN_BPM = 148;
+  const WIN_NOTE = (60 / WIN_BPM) / 2 * 1000;
+
+  const C4w=261.63,D4w=293.66,E4w=329.63,F4w=349.23,G4w=392.00,A4w=440.00,B4w=493.88;
+  const C5w=523.25,D5w=587.33,E5w=659.25,F5w=698.46,G5w=783.99,A5w=880.00,C6w=1046.50;
+
+  const WIN_MELODY = [
+    C5w,E5w,G5w,C6w, C6w,0,G5w,E5w,
+    F5w,A5w,C6w,0,   G5w,B4w,D5w,G5w,
+    E5w,G5w,C6w,G5w, A5w,F5w,D5w,B4w,
+    C5w,E5w,G5w,0,   C6w,C6w,C6w,0,
+  ];
+  const WIN_BASS = [
+    C4w,0,E4w,0, G4w,0,C5w,0,
+    F4w,0,A4w,0, G4w,0,B4w,0,
+    C4w,0,G4w,0, F4w,0,D4w,0,
+    C4w,0,E4w,0, G4w,C5w,C4w,0,
+  ];
+  const WIN_ARP = [
+    C4w,E4w,G4w,C5w, E4w,G4w,C5w,E5w,
+    F4w,A4w,C5w,F5w, G4w,B4w,D5w,G5w,
+    C4w,E4w,G4w,C5w, A4w,C5w,E5w,A5w,
+    C4w,G4w,E4w,C5w, G4w,E5w,C5w,C6w,
+  ];
+
+  function playWin() {
+    if (muted) return;
+    // use a separate AudioContext so it doesn't conflict with bg music state
+    const wctx = new (window.AudioContext || window.webkitAudioContext)();
+    const wGain = wctx.createGain();
+    wGain.gain.value = 0.5;
+    wGain.connect(wctx.destination);
+    const dur = WIN_NOTE / 1000;
+    const totalSteps = WIN_MELODY.length * 2; // play twice
+
+    function wNote(type, freq, gain, d) {
+      const o = wctx.createOscillator(), g = wctx.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.setValueAtTime(gain, wctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, wctx.currentTime + d);
+      o.connect(g); g.connect(wGain);
+      o.start(); o.stop(wctx.currentTime + d);
+    }
+
+    let ws = 0;
+    function wTick() {
+      const i = ws % WIN_MELODY.length;
+      const a = ws % WIN_ARP.length;
+      if (WIN_MELODY[i]) wNote('square',   WIN_MELODY[i],     0.15, dur * 0.8);
+      if (WIN_BASS[i])   wNote('triangle', WIN_BASS[i] / 2,   0.18, dur * 0.65);
+      if (WIN_ARP[a])    wNote('sine',     WIN_ARP[a] * 2,    0.07, dur * 0.35);
+      ws++;
+      if (ws >= totalSteps) { clearInterval(wInt); setTimeout(() => wctx.close(), 500); }
+    }
+    wTick();
+    const wInt = setInterval(wTick, WIN_NOTE);
+  }
+
+  return { start, stop, pause, resume, toggleMute, playWin };
+})();
+
+document.getElementById('mute-btn').addEventListener('click', Music.toggleMute);
+
+</script>
+</body>
+</html>
