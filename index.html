@@ -14,6 +14,7 @@ body {
   min-height:100vh;
   font-family:'Press Start 2P',monospace;
   overflow:hidden;
+  overflow-x:hidden;
 }
 #title-screen {
   display:flex; flex-direction:column;
@@ -114,6 +115,96 @@ body {
   border:none; cursor:pointer; box-shadow:4px 4px 0 #b8860b;
 }
 #restart-btn:hover, #next-level-btn:hover {transform:translate(2px,2px);box-shadow:2px 2px 0 #b8860b;}
+#keyword-row {
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+}
+#keyword-input {
+  font-family:'Press Start 2P',monospace; font-size:11px;
+  padding:8px 12px; width:200px; text-align:center;
+  background:#16213e; color:#ffd700;
+  border:2px solid #444; outline:none;
+}
+#keyword-input:focus { border-color:#ffd700; }
+#keyword-feedback { font-size:8px; min-height:12px; }
+#win-keyword-box {
+  background:#16213e; border:2px solid #ffd700;
+  padding:12px 24px; text-align:center;
+}
+#win-keyword-label { font-size:8px; color:#aaa; margin-bottom:6px; }
+#win-keyword-word { font-size:18px; color:#ffd700; letter-spacing:3px; }
+#win-passcode-row { font-size:9px; color:#88ff88; margin-top:8px; letter-spacing:2px; min-height:16px; }
+
+#how-to-play-btn {
+  font-family:'Press Start 2P',monospace; font-size:9px;
+  padding:8px 18px; background:transparent; color:#aaa;
+  border:2px solid #444; cursor:pointer;
+  transition:all 0.15s;
+}
+#how-to-play-btn:hover { border-color:#ffd700; color:#ffd700; }
+
+#instructions-screen {
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  min-height:100vh;
+  padding:40px 20px;
+  box-sizing:border-box;
+}
+#instructions-screen.active { display:flex; }
+.instr-inner {
+  max-width:680px;
+  width:100%;
+  color:#ccc;
+  font-family:Arial,sans-serif;
+  font-size:14px;
+  line-height:1.8;
+}
+.instr-inner h1 {
+  font-family:'Press Start 2P',monospace;
+  font-size:22px;
+  color:#ffd700;
+  text-shadow:3px 3px 0 #b8860b;
+  text-align:center;
+  margin-bottom:28px;
+}
+.instr-inner h2 {
+  font-family:'Press Start 2P',monospace;
+  font-size:11px;
+  color:#ffd700;
+  margin:28px 0 10px;
+  padding-bottom:6px;
+  border-bottom:2px solid #333;
+}
+.instr-inner p { margin:0 0 12px; }
+.instr-inner ul {
+  margin:0 0 12px 20px;
+  padding:0;
+}
+.instr-inner ul li { margin-bottom:6px; }
+.instr-inner .highlight {
+  color:#ffd700;
+  font-weight:bold;
+}
+.instr-inner .tip-box {
+  background:#16213e;
+  border:2px solid #333;
+  border-radius:4px;
+  padding:14px 18px;
+  margin:12px 0;
+}
+.play-mq-btn {
+  font-family:'Press Start 2P',monospace;
+  font-size:12px;
+  padding:12px 28px;
+  background:#ffd700;
+  color:#1a1a2e;
+  border:none;
+  cursor:pointer;
+  box-shadow:4px 4px 0 #b8860b;
+  margin:24px 0;
+  display:block;
+}
+.play-mq-btn:hover { transform:translate(2px,2px); box-shadow:2px 2px 0 #b8860b; }
 </style>
 </head>
 <body>
@@ -123,8 +214,63 @@ body {
   <p style="font-size:9px;color:#aaa;">Choose your hero!</p>
   <div id="char-select"></div>
   <p id="select-hint" style="font-size:8px;color:#888;">Click a character to select</p>
+  <div id="keyword-row">
+    <input id="keyword-input" type="text" placeholder="have a keyword?" autocomplete="off" spellcheck="false">
+    <div id="keyword-feedback"></div>
+  </div>
   <button id="start-btn" disabled>START GAME</button>
+  <button id="how-to-play-btn">HOW TO PLAY</button>
   <p style="font-size:7px;color:#555;margin-top:4px;">Arrow keys or WASD to move</p>
+</div>
+
+<!-- INSTRUCTIONS PAGE -->
+<div id="instructions-screen">
+  <div class="instr-inner">
+    <button class="play-mq-btn" id="play-mq-top">▶ PLAY MATHQUEST</button>
+
+    <h1>⭐ MATHQUEST ⭐</h1>
+
+    <h2>Welcome!</h2>
+    <p>MathQuest is a math adventure game where you explore a maze, make animal friends, and earn gold coins by solving math problems. Collect enough coins to get past Shasta the Dragon and move on to the next level!</p>
+
+    <h2>How to Move</h2>
+    <p>Use the <span class="highlight">arrow keys</span> or <span class="highlight">WASD</span> on your keyboard to move your hero around the maze. The maze starts dark — explore to light it up and discover what's hiding nearby.</p>
+
+    <h2>Making Friends and Earning Coins</h2>
+    <p>When you get close to an animal friend, bump into them to start a math challenge. Answer correctly and you earn a gold coin. Each level has 11 friends to find, but you only need a certain number of coins to pass Shasta the Dragon and complete the level.</p>
+    <p>If you get a math problem wrong, don't worry — you'll get a new one to try right away.</p>
+
+    <h2>The Levels</h2>
+    <p>There are 5 levels, and each one gets harder:</p>
+    <ul>
+      <li><span class="highlight">Level 1</span> — addition and subtraction with numbers 11–50. Collect 5 coins to pass.</li>
+      <li><span class="highlight">Level 2</span> — numbers 51–99. Collect 6 coins to pass.</li>
+      <li><span class="highlight">Level 3</span> — numbers 101–333. Collect 7 coins to pass.</li>
+      <li><span class="highlight">Level 4</span> — numbers 101–667. Collect 8 coins to pass.</li>
+      <li><span class="highlight">Level 5</span> — numbers 101–999. Collect 10 coins to pass.</li>
+    </ul>
+
+    <h2>Keywords and the Secret Passcode</h2>
+    <p>Every time you complete a level, you earn a secret keyword. <span class="highlight">Write it down!</span> You can enter your keyword on the start screen next time you play to skip ahead to where you left off.</p>
+    <p>Complete all five levels and the keywords spell out a secret passcode. This passcode will change weekly.</p>
+
+    <h2>Choosing Your Hero</h2>
+    <p>Pick from four heroes at the start — Dog, Tiger, Monkey, or Capybara. They all play the same way, so choose your favorite!</p>
+
+    <h2>Tips</h2>
+    <div class="tip-box">
+      <ul>
+        <li>Explore the whole map — friends can be hiding anywhere in the maze.</li>
+        <li>You don't have to find all 11 friends, just enough to earn the coins you need. But the more you find, the more practice you get!</li>
+        <li>Check the top of the screen to track your coins and how many friends you've found.</li>
+        <li>Use the <span class="highlight">♪ ON / OFF</span> button in the top corner to toggle the music.</li>
+      </ul>
+    </div>
+
+    <p style="text-align:center;color:#888;font-size:13px;margin-top:8px;">Happy exploring — good luck, Math Hero!</p>
+
+    <button class="play-mq-btn" id="play-mq-bottom">▶ PLAY MATHQUEST</button>
+  </div>
 </div>
 
 <div id="game-wrap">
@@ -152,6 +298,11 @@ body {
       <h2>YOU WIN! 🎉</h2>
       <canvas id="win-canvas" width="640" height="180"></canvas>
       <p id="win-msg"></p>
+      <div id="win-keyword-box">
+        <div id="win-keyword-label">YOUR KEYWORD</div>
+        <div id="win-keyword-word"></div>
+        <div id="win-passcode-row"></div>
+      </div>
       <button id="next-level-btn" style="display:none;">LEVEL 2 →</button>
       <button id="restart-btn">PLAY AGAIN</button>
     </div>
@@ -471,17 +622,17 @@ function npcDragon(){
 
 const NPC_DEFS = [
   {id:'a',name:'Penny Bunny',    color:'#f0f0f0',sprite:npcBunny()    },
-  {id:'b',name:'Mila Mouse',      color:'#c8a0c8',sprite:npcMouse()    },
-  {id:'c',name:'Jamie Squirrel',   color:'#e8a060',sprite:npcSquirrel() },
+  {id:'b',name:'Mila Mouse',     color:'#c8a0c8',sprite:npcMouse()    },
+  {id:'c',name:'Jamie Squirrel', color:'#e8a060',sprite:npcSquirrel() },
   {id:'d',name:'Lucas Cat',      color:'#aaaaaa',sprite:npcCat()      },
-  {id:'e',name:'Louisa Deer',     color:'#c8a050',sprite:npcDeer()     },
+  {id:'e',name:'Louisa Deer',    color:'#c8a050',sprite:npcDeer()     },
   {id:'f',name:'Lydia Bear',     color:'#c8a060',sprite:npcBear()     },
   {id:'g',name:'Fiona Owl',      color:'#e8d090',sprite:npcOwl()      },
-  {id:'h',name:'Eddie Turtle',    color:'#70c870',sprite:npcTurtle()   },
-  {id:'i',name:'Theo Beaver',   color:'#c89060',sprite:npcBeaver()   },
-  {id:'j',name:'Siersha Monkey',    color:'#e8b880',sprite:npcMonkey()   },
+  {id:'h',name:'Eddie Turtle',   color:'#70c870',sprite:npcTurtle()   },
+  {id:'i',name:'Theo Beaver',    color:'#c89060',sprite:npcBeaver()   },
+  {id:'j',name:'Siersha Monkey', color:'#e8b880',sprite:npcMonkey()   },
   {id:'k',name:'Amara Hedgehog', color:'#a0a060',sprite:npcHedgehog() },
-  {id:'l',name:'Shasta Dragon',   color:'#ff6060',sprite:npcDragon()   },
+  {id:'l',name:'Shasta Dragon',  color:'#ff6060',sprite:npcDragon()   },
 ];
 const NPC_MAP = {};
 NPC_DEFS.forEach(n => NPC_MAP[n.id]=n);
@@ -591,6 +742,19 @@ const LEVEL_CONFIG = [
 ];
 
 // ============================================================
+//  PASSCODE  — update PASSCODE_WORDS to refresh periodically
+//  Word[i] is earned at end of level (i+1), skips to level (i+2)
+// ============================================================
+const PASSCODE_WORDS = ['your','nose','is','a','potato'];
+const KEYWORD_SKIP = {
+  [PASSCODE_WORDS[0]]: 2,   // 'your'   → start at Level 2
+  [PASSCODE_WORDS[1]]: 3,   // 'nose'   → start at Level 3
+  [PASSCODE_WORDS[2]]: 4,   // 'is'     → start at Level 4
+  [PASSCODE_WORDS[3]]: 5,   // 'a'      → start at Level 5
+  // PASSCODE_WORDS[4] 'potato' — no skip yet
+};
+
+// ============================================================
 //  MATH
 // ============================================================
 function randInt(lo,hi){return Math.floor(Math.random()*(hi-lo+1))+lo;}
@@ -622,7 +786,7 @@ function makeQ(level) {
 //  SPEECHES
 // ============================================================
 const SPEECHES = {
-  a:'Hi! I\'m Penny Bunny!\nSolve my problem and\nearnyourself a gold coin! 🪙',
+  a:'Hi! I\'m Penny Bunny!\nSolve my problem and\nearn yourself a gold coin! 🪙',
   b:'Squeak! Mila Mouse here!\nAnswer correctly and\nI\'ll give you a coin! 🪙',
   c:'Chitter! Jamie Squirrel!\nHelp me with this problem\nand earn a coin! 🪙',
   d:'Meow! Lucas Cat purrs...\nSolve this and I\'ll\ngive you a gold coin! 🪙',
@@ -632,7 +796,7 @@ const SPEECHES = {
   h:'Slowly... Eddie Turtle.\nGet it right and earn\none gold coin! 🪙',
   i:'SLAP! Theo Beaver!\nAnswer my big problem\nfor a coin! 🪙',
   j:'Ooh ooh! Siersha Monkey!\nHUGE number challenge!\nWin a coin! 🪙',
-  k:'SPIKE! Amara Hedgehog here!\nSolve this tough one\nfor a gold coin! 🪙',
+  k:'Amara Hedgehog here!\nSolve this tough one\nfor a gold coin! 🪙',
 };
 
 // ============================================================
@@ -701,7 +865,26 @@ PLAYERS.forEach((pl,i) => {
   });
   charSel.appendChild(card);
 });
-startBtn.addEventListener('click', ()=>startGame(1));
+startBtn.addEventListener('click', ()=>{
+  const kw = document.getElementById('keyword-input').value.trim().toLowerCase();
+  const skipTo = kw ? KEYWORD_SKIP[kw] : null;
+  const fb = document.getElementById('keyword-feedback');
+  if (kw && !KEYWORD_SKIP[kw] && kw !== PASSCODE_WORDS[4]) {
+    fb.style.color='#ff8888';
+    fb.textContent='unknown keyword';
+    return;
+  }
+  if (kw === PASSCODE_WORDS[4]) {
+    fb.style.color='#ff8888';
+    fb.textContent='that word has no skip yet!';
+    return;
+  }
+  if (skipTo) {
+    fb.style.color='#88ff88';
+    fb.textContent=`skipping to level ${skipTo}!`;
+  }
+  startGame(skipTo || 1);
+});
 
 function startGame(level){
   level = level||1;
@@ -843,6 +1026,19 @@ function triggerWin(){
   const nextBtn=document.getElementById('next-level-btn');
   const restartBtn=document.getElementById('restart-btn');
   const cfg=LEVEL_CONFIG[G.level];
+
+  // keyword & passcode reveal
+  const word = PASSCODE_WORDS[G.level-1];
+  const soFar = PASSCODE_WORDS.slice(0, G.level).join(' ');
+  document.getElementById('win-keyword-word').textContent = word;
+  if (G.level < 5) {
+    document.getElementById('win-keyword-label').textContent = 'YOUR KEYWORD — write this down!';
+    document.getElementById('win-passcode-row').textContent = `passcode so far: "${soFar}"`;
+  } else {
+    document.getElementById('win-keyword-label').textContent = '🏆 FULL PASSCODE UNLOCKED! 🏆';
+    document.getElementById('win-passcode-row').textContent = `"${soFar}"`;
+  }
+
   if(G.level < 5){
     document.getElementById('win-msg').textContent=
       `Level ${G.level} Complete!\nCoins earned: ${G.coins} / ${cfg.coins}\nFriends made: ${G.solved.size} / 11\n\nReady for Level ${G.level+1}? 🐉`;
@@ -1197,6 +1393,23 @@ const Music = (() => {
 })();
 
 document.getElementById('mute-btn').addEventListener('click', Music.toggleMute);
+
+// How to Play navigation
+function showInstructions() {
+  document.getElementById('title-screen').style.display='none';
+  document.getElementById('instructions-screen').classList.add('active');
+  document.body.style.overflowY='auto';
+  window.scrollTo(0,0);
+}
+function showTitleScreen() {
+  document.getElementById('instructions-screen').classList.remove('active');
+  document.getElementById('title-screen').style.display='flex';
+  document.body.style.overflowY='hidden';
+  window.scrollTo(0,0);
+}
+document.getElementById('how-to-play-btn').addEventListener('click', showInstructions);
+document.getElementById('play-mq-top').addEventListener('click', showTitleScreen);
+document.getElementById('play-mq-bottom').addEventListener('click', showTitleScreen);
 
 </script>
 </body>
